@@ -16,6 +16,7 @@ network:
   allowed:
     - github.blog
     - github.com
+    - awesome-copilot.github.com
 safe-outputs:
   create-pull-request:
     draft: true
@@ -33,6 +34,7 @@ Use the web-fetch tool to read both:
 
 - [GitHub Blog latest](https://github.blog/latest/)
 - [GitHub Changelog](https://github.blog/changelog/)
+- [Awesome Copilot workflows](https://awesome-copilot.github.com/workflows/)
 
 Use the edit tool to update only `site/content/github-info.md` with accurate, useful information supported by those sources and consistent with Mona's notes. Preserve the existing page structure and avoid inventing facts. When repository guidance or reference files from GitHub are needed, read them with the configured GitHub repository API tools rather than terminal, CLI, or sandboxed commands.
 
