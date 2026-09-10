@@ -176,7 +176,7 @@ jobs:
                 passed: ${{ steps.check-awesome-copilot-network.outcome == 'success' }}
               - description: "Checked that an open generated pull request or fallback issue updates site/content/github-info.md"
                 passed: ${{ steps.find-generated-pr.outcome == 'success' }}
-              - description: "Checked that the generated pull request includes source context"
+              - description: "Checked that the generated pull request or fallback issue includes source context"
                 passed: ${{ steps.check-pr-sources.outcome == 'success' }}
 
       - name: Fail job if not all checks passed
