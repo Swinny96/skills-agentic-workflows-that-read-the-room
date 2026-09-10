@@ -103,7 +103,7 @@ jobs:
           printf '%s\n' "$network_config" |
             grep -Eqi '(^|[][[:space:],-])(awesome-copilot\.)?github\.com([][[:space:],]|$)|(^|[][[:space:],-])github([][[:space:],]|$)'
 
-      - name: Find generated PR that updates website content
+      - name: Find generated output that updates website content
         id: find-generated-pr
         continue-on-error: true
         run: |
@@ -123,7 +123,17 @@ jobs:
               exit 0
             fi
           done < <(gh pr list --state open --base main --limit 100 --json number,createdAt --jq '.[] | [.number, .createdAt] | @tsv')
-          echo "No open pull request updates site/content/github-info.md"
+          while IFS=$'\t' read -r issue_number created_at; do
+            created_epoch="$(date -u -d "$created_at" +%s 2>/dev/null || echo 0)"
+            if [ "$run_created_epoch" -ne 0 ] && [ "$created_epoch" -lt "$run_created_epoch" ]; then
+              continue
+            fi
+            if gh issue view "$issue_number" --json body --jq .body | grep -q 'site/content/github-info.md'; then
+              echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done < <(gh issue list --state open --label agentic-workflows --limit 100 --json number,createdAt --jq '.[] | [.number, .createdAt] | @tsv')
+          echo "No open pull request or fallback issue updates site/content/github-info.md"
           exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,10 +143,15 @@ jobs:
         if: steps.find-generated-pr.outcome == 'success'
         continue-on-error: true
         run: |
-          {
-            gh pr view "${{ steps.find-generated-pr.outputs.pr_number }}" --json body --jq .body
-            gh pr diff "${{ steps.find-generated-pr.outputs.pr_number }}"
-          } | grep -Eiq 'GitHub Blog|GitHub Changelog|github\.blog|awesome-copilot\.github\.com'
+          if [ -n "${{ steps.find-generated-pr.outputs.pr_number }}" ]; then
+            {
+              gh pr view "${{ steps.find-generated-pr.outputs.pr_number }}" --json body --jq .body
+              gh pr diff "${{ steps.find-generated-pr.outputs.pr_number }}"
+            } | grep -Eiq 'GitHub Blog|GitHub Changelog|github\.blog|awesome-copilot\.github\.com'
+          else
+            gh issue view "${{ steps.find-generated-pr.outputs.issue_number }}" --json body --jq .body |
+              grep -Eiq 'GitHub Blog|GitHub Changelog|github\.blog|awesome-copilot\.github\.com'
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -159,7 +174,7 @@ jobs:
                 passed: ${{ steps.check-copilot-secret.outcome == 'success' }}
               - description: "Checked that the workflow allows network access to the Awesome Copilot source"
                 passed: ${{ steps.check-awesome-copilot-network.outcome == 'success' }}
-              - description: "Checked that an open generated pull request updates site/content/github-info.md"
+              - description: "Checked that an open generated pull request or fallback issue updates site/content/github-info.md"
                 passed: ${{ steps.find-generated-pr.outcome == 'success' }}
               - description: "Checked that the generated pull request includes source context"
                 passed: ${{ steps.check-pr-sources.outcome == 'success' }}
